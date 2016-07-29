@@ -1,0 +1,6 @@
+.vscode
+.dropbox
+*.pyc
+__pycache__
+platform
+desktop.ini
