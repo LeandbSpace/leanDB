@@ -27,7 +27,7 @@ def createTable( commandJsonObj, databaseStorage ):
         missing = True
         missedItems.append("tableName")
     if( missing == False ):
-        tableAbsolutePath =  databaseStorage+commandJsonObj['databaseName']+pathEndsWith+commandJsonObj['tableName']
+        tableAbsolutePath =  databaseStorage+commandJsonObj['databaseName']+pathEndsWith+commandJsonObj['tableName']+pathEndsWith+'_ldb'+pathEndsWith+'_index'
         # Attempt to cretate a new table directory
         # If the database was not found then it will 
         # try to create the database directory first and then table dir.

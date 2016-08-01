@@ -61,6 +61,7 @@ def insertData( commandJsonObj, databaseStorage ):
                 docID.seek(0)
                 documentID = str(int(currentID)+1)
                 docID.write( documentID )
+                # docID.truncate()
                 docID.close()
         except Exception as e:
             ret['status'] = [
@@ -109,4 +110,4 @@ def fetchData( commandJsonObj, databaseStorage ):
     # is database and table exists
     # is there is any where conditions
     # is there is a limit tag
-    
+    return True
