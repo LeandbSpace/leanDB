@@ -1,4 +1,4 @@
-import re
+import re, json
 # def addslashes(s):
 #     s = s.replace( "\n", "\\n" )
 #     s = s.replace( "\r\n", "\\n" )
@@ -10,11 +10,14 @@ import re
 #     r = re.sub(r"\\", "", r)
 #     return r
 
-s = """efvrwev
-sdc
-sdc sdvd   "  sd"vsd sdvsdvsdv
-sdcsd
-c \n\n ascascasc"""
+s = """{ "action": "DELETE_TABLE", "databaseName": "prijm_news", "tableName": "login \ antorher logs"}"""
+s = s.replace("\\", "\\\\")
+print(s)
+# x = json.loads(s.replace('\r\n', '\\r\\n').replace('\n', '\\n'))
+x = json.loads(s)
+
+print( x )
+
 
 # ns = addslashes(s)
 # print( ns )
@@ -23,7 +26,8 @@ c \n\n ascascasc"""
 
 # print( stripslashes(ns) )
 
-print( " ".join( s.split() ) )
+# print( " ".join( s.split() ) )
+# print( r''+s )
 
 # print( stripslashes(s) )
 

@@ -42,5 +42,24 @@ def stripWhiteSpaces(stringValue):
 """
     Prepare string for as a index value
 """
-def encodeIndexString(stringValue):
-    return " ".join( stringValue.split() )
+
+def safeEscapedString( s ):
+    s = s.replace( "\\", "\\\\" )
+    s = s.replace( "\r\n", "\\n" )
+    s = s.replace( "\n", "\\n" )
+    s = s.replace( "\a", "\\a" )
+    s = s.replace( "\b", "\\b" )
+    s = s.replace( "\f", "\\f" )
+    s = s.replace( "\n", "\\n" )
+    s = s.replace( "\r", "\\r" )
+    s = s.replace( "\t", "\\t" )
+    s = s.replace( "\v", "\\v" )
+    s = s.replace( "\\", "\\\\" )
+    s = s.replace( "'", "\'" )
+    s = s.replace( "\a", "\\a" )
+    s = s.replace( '"', '\"' )
+    return s
+
+def encodeIndexString( stringValue ):
+    s = " ".join( stringValue.split() )
+    return safeEscapedString( s )

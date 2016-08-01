@@ -52,7 +52,7 @@ def query():
     try:
         command = json.loads(request.forms.get('cmd'))
     except Exception as e:
-        return "[ { 'status_type': False }, { 'status_message': 'Error: '"+str(e.args)+" } ]"
+        return "[ { 'status_type': False }, { 'status_message': 'Error Fucked up: '"+str(e.args)+" } ]"
     # Translate the query json file and map them to action
     if( command['action'] == 'CREATE_DATABASE' ):
         return createDatabase( command['databaseName'], configData['storage_path'] )
