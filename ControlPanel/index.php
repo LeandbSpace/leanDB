@@ -29,13 +29,13 @@
     <?php
         if( isset($_POST['title']) ) {
             echo '<div class="container tc">';
-            echo '<pre>';
-            print_r($_POST);
-            echo '</pre>';
-            echo '</div>';
-
-            echo '<div class="container tc">';
-            sendData( $_POST );
+                $response = sendData( $_POST );
+                if( $response->status->status_type == true ) {
+                    echo '<h1>'.$response->status->status_message.'</h1>';
+                    echo '<p>Document ID: '.$response->id.'</p>';
+                } else {
+                    echo '<h1>'.$response->status->status_message.'</h1>';
+                }
             echo '</div>';
         }
     ?>

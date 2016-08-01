@@ -99,6 +99,10 @@ def insertData( commandJsonObj, databaseStorage ):
                         { 'status_message': 'Error while writing index for "'+indexItem+'": '+str(e.args) }
                     ]
         ret['id'] = documentID
+        ret['status'] = {
+            'status_type': True,
+            'status_message': 'New data inserted successfully.'
+        }
     else:
         ret['status'] = [
             { 'status_type': False },
