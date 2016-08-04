@@ -10,6 +10,31 @@
         return $response;
     }
 
+    function slugify($text) {
+        // replace non letter or digits by -
+        $text = preg_replace('~[^\pL\d]+~u', '-', $text);
+        // transliterate
+        $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+        // remove unwanted characters
+        $text = preg_replace('~[^-\w]+~', '', $text);
+        // trim
+        $text = trim($text, '-');
+        // remove duplicate -
+        $text = preg_replace('~-+~', '-', $text);
+        // lowercase
+        $text = strtolower($text);
+        if (empty($text)) {
+            return 'n-a';
+        }
+        return $text;
+    }
+
+    function dryQuery( $jsonQueryObject ) {
+        $url = "http://127.10.5.10:5925/query";
+        $response = httpPost($url, [ 'cmd' => $jsonQueryObject ] );
+        return json_decode($response);
+    }
+
     // function leanDBString($str) {
     //     $str = str_replace( '"', '\"', $str );
     //     $str = str_replace( "\n\r", "\\n\\r", $str );
@@ -27,15 +52,14 @@
 
         $insertableData = [
             'title' => $dataArray['title'],
-            'snippet' => $dataArray['snippet'],
             'content' => $dataArray['content'],
-            'category' => $dataArray['category']
+            'category' => $dataArray['category'],
+            'slug' => slugify($dataArray['title'])
         ];
 
-        $q = '{ "action": "INSERT_DATA", "databaseName": "goldposts", "tableName": "posts", "data": '.json_encode($insertableData).', "_index": "title, snippet, category" }';
+        $q = '{ "action": "INSERT_DATA", "databaseName": "goldposts", "tableName": "posts", "data": '.json_encode($insertableData).', "_index": "title, category, slug" }';
 
         $url = "http://127.10.5.10:5925/query";
-
 
         $response = httpPost($url, [ 'cmd' => $q ] );
 

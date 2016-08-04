@@ -5,6 +5,10 @@ html, body {
     color: #eee;
 }
 
+a {
+    color: #fff;
+}
+
 div.container {
     padding: 20px;
     background-color: #444;

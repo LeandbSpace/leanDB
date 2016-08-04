@@ -12,10 +12,6 @@ def readJson(filePath):
     try:
         with open( filePath ) as confRawData:
             configData = json.load( confRawData )
-            # validate path settings
-            pathEndWithString = pathEndWith()
-            if( not configData['storage_path'].endswith( pathEndWithString ) ):
-                configData['storage_path'] += pathEndWithString
             return configData
     except Exception as e:
         return False
@@ -33,7 +29,12 @@ def writeJson( jsonData, filePath ):
     return a json dumps of all informations it found.
 """
 def starterConf():
-    return readJson( 'conf/leandb_starter_conf.json' )
+    configData = readJson( 'conf/leandb_starter_conf.json' )
+    # validate path settings
+    pathEndWithString = pathEndWith()
+    if( not configData['storage_path'].endswith( pathEndWithString ) ):
+        configData['storage_path'] += pathEndWithString
+    return configData
 """
     Remove all whitespaces/multiple whitespaces from a string
 """

@@ -36,16 +36,21 @@ def query():
             }
         Fetch Data:
             { 
-                "action": "FETCH_DATA", "databaseName": "prijm_news", "tableName": "news", 
-                "conditions": {
-                    "limit": {
-                        "count": "10",
-                        "skip": "0"
-                    },
-                    "where": [
-                        { "id": "20" },
-                        { "userid": "2" }
-                    ]
+                "action": "FETCH_DATA", 
+                "databaseName": "goldposts", 
+                "tableName": "posts", 
+                "columns": "*",
+                "limit": {
+                    "count": "10",
+                    "skip": "0"
+                },
+                "where": {
+                    "_strict": { "users.username": "hasan" },
+                    "eq": { "userid": "2102", "post_status": "1" },
+                    "neq": { "post_status": "0" },
+                    "gt": { "votes": "10" },
+                    "lt": { "downvotes": "5" },
+                    "bt": { "votes": "5,10" }
                 }
             }
     """
@@ -68,6 +73,8 @@ def query():
         return deleteTable( command, configData['storage_path'] )
     elif( command['action'] == 'INSERT_DATA' ):
         return insertData( command, configData['storage_path'] )
+    elif( command['action'] == 'FETCH_DATA' ):
+        return fetchData( command, configData['storage_path'] )
 
 # run the server, get server informations from leandb conf file
 run(

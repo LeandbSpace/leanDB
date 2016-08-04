@@ -71,6 +71,8 @@ def insertData( commandJsonObj, databaseStorage ):
             # exit because there was trouble
             return ret
         # create the data file
+        # add the system document id with the json file
+        commandJsonObj['data']['_id'] = documentID
         try:
             writeJson( commandJsonObj['data'], tableAbsolutePath+pathEnding+documentID+'.ldb' )
         except Exception as e:
@@ -104,14 +106,57 @@ def insertData( commandJsonObj, databaseStorage ):
             'status_message': 'New data inserted successfully.'
         }
     else:
-        ret['status'] = [
-            { 'status_type': False },
-            { 'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing' }
-        ]
+        ret['status'] = { 
+            'status_type': False,
+            'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing' 
+        }
     return ret
 
 def fetchData( commandJsonObj, databaseStorage ):
-    # is database and table exists
-    # is there is any where conditions
-    # is there is a limit tag
-    return True
+    ret = {}
+    missing = False
+    missedItems = []
+
+    pathEnding = pathEndWith()
+
+    tableAbsolutePath =  databaseStorage+commandJsonObj['databaseName']+pathEnding+commandJsonObj['tableName']
+    tableConfigFile = tableAbsolutePath+pathEnding+'_ldb'+pathEnding
+    tableSystemID = tableConfigFile+'id'
+
+    # validate the query
+    if( not commandJsonObj['databaseName'] or commandJsonObj['databaseName'] == "" ):
+        missing = True
+        missedItems.append("databaseName")
+    if( not commandJsonObj['tableName'] or commandJsonObj['tableName'] == "" ):
+        missing = True
+        missedItems.append("tableName")
+
+    if( missing == False ):
+        # validate if table and database are exists
+        resultSet = {}
+        # set default value for limit if any limits are not provided
+        if 'limit' in commandJsonObj:
+            count = int( commandJsonObj['limit']['count'] )
+            skip = int( commandJsonObj['limit']['skip'] )
+        else:
+            count = 100
+            skip = 0
+        # set default value for columns if not given
+        if 'columns' not in commandJsonObj:
+            commandJsonObj['columns'] = '*'
+        # read id index
+        iterationCounts = 0
+        thisResultSet = []
+        with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid' ) as _id:
+            for item in _id:
+                thisResultSet.append(readJson( str(tableAbsolutePath+pathEnding+item+'.ldb').replace('\n', '') ))
+                iterationCounts = iterationCounts + 1
+        resultSet['items'] = thisResultSet
+        resultSet['iterations'] = iterationCounts
+        return resultSet
+    else:
+        ret['status'] = { 
+            'status_type': False,
+            'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing' 
+        }
+    return ret
