@@ -37,7 +37,7 @@ def insertData( commandJsonObj, databaseStorage ):
 
     if( missing == False ):
         # Attempt to cretate a new table directory
-        # If the database was not found then it will 
+        # If the database was not found then it will
         # try to create the database directory first and then table dir.
         if( not os.path.isdir( tableAbsolutePath ) ):
             try:
@@ -64,10 +64,10 @@ def insertData( commandJsonObj, databaseStorage ):
                 # docID.truncate()
                 docID.close()
         except Exception as e:
-            ret['status'] = [
-                { 'status_type': False },
-                { 'status_message': 'Error while writing document id. ' + str(e.args) }
-            ]
+            ret['status'] = {
+                'status_type': False,
+                'status_message': 'Error while writing document id. ' + str(e.args)
+            }
             # exit because there was trouble
             return ret
         # create the data file
@@ -76,10 +76,10 @@ def insertData( commandJsonObj, databaseStorage ):
         try:
             writeJson( commandJsonObj['data'], tableAbsolutePath+pathEnding+documentID+'.ldb' )
         except Exception as e:
-            ret['status'] = [
-                { 'status_type': False },
-                { 'status_message': 'Error while writing document: '+str(e.args) }
-            ]
+            ret['status'] = {
+                'status_type': False,
+                'status_message': 'Error while writing document: '+str(e.args)
+            }
             # exit because there was trouble
             return ret
         # create primary id index
@@ -96,19 +96,19 @@ def insertData( commandJsonObj, databaseStorage ):
                     with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+indexItem, 'a+' ) as pkid:
                         print( '"'+documentID+'" "'+encodeIndexString( commandJsonObj['data'][indexItem] )+'"', file=pkid )
                 except Exception as e:
-                    ret['status'] = [
-                        { 'status_type': True },
-                        { 'status_message': 'Error while writing index for "'+indexItem+'": '+str(e.args) }
-                    ]
+                    ret['status'] = {
+                        'status_type': True,
+                        'status_message': 'Error while writing index for "'+indexItem+'": '+str(e.args)
+                    }
         ret['id'] = documentID
         ret['status'] = {
             'status_type': True,
             'status_message': 'New data inserted successfully.'
         }
     else:
-        ret['status'] = { 
+        ret['status'] = {
             'status_type': False,
-            'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing' 
+            'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing'
         }
     return ret
 
@@ -146,7 +146,42 @@ def fetchData( commandJsonObj, databaseStorage ):
             commandJsonObj['columns'] = '*'
         # read id index
         iterationCounts = 0
+        _rawDocIdLists = []
         thisResultSet = []
+        """
+            Get all the doc id that meets the where criterias
+            If there was no where conditions then skip this part and
+                go through the default table pid list
+        """
+        if 'where' in commandJsonObj:
+            if commandJsonObj['where'] != '':
+                # greater than
+                if 'gt' in commandJsonObj['where']:
+                    _rawDocIdLists + diggIndex(
+                        commandJsonObj['databaseName'], commandJsonObj['tableName'],
+                        commandJsonObj['where']['gt'], databaseStorage,  )
+        """
+            Remove duplicate doc ID's
+        """
+
+        """
+            Fetch all the doc using their id, decode the json
+            If the doc file didnt exists then skip that
+        """
+
+        """
+            Implement sort operations among all the data fetched above
+        """
+
+        """
+            Limit number of data item to return
+        """
+
+        """
+            Strip columns/index items according to the query
+            If there is no columns specified then return all avialable elements
+        """
+
         with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid' ) as _id:
             for item in _id:
                 thisResultSet.append(readJson( str(tableAbsolutePath+pathEnding+item+'.ldb').replace('\n', '') ))
@@ -155,8 +190,78 @@ def fetchData( commandJsonObj, databaseStorage ):
         resultSet['iterations'] = iterationCounts
         return resultSet
     else:
-        ret['status'] = { 
+        ret['status'] = {
             'status_type': False,
-            'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing' 
+            'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing'
         }
     return ret
+
+# def diggIndex( database, table, index, databaseStorage, matchAgainst, comparisonType, pathEnding ):
+def diggIndex( database, table, databaseStorage, matchAgainst, comparisonCommand, pathEnding ):
+    # find the index key name
+    # http://stackoverflow.com/questions/5904969/python-how-to-print-a-dictionarys-key
+    indexPath = databaseStorage+database+pathEnding+table+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+index
+    # read each line
+    documentCollections = []
+    with open( indexPath ) as indexData:
+        for item in indexData:
+            # using regular expression to prepare index data columns
+            rgxp = re.compile( '(".*?").*?(".*?")', re.IGNORECASE|re.DOTALL )
+            rgxp = rgxp.search( item )
+            if rgxp:
+                docID = dequote( rgxp.group(1) ).strip()
+                columnData = dequote( rgxp.group(2) ).strip()
+                # equal comparison
+                if comparisonType == 'eq':
+                    if columnData in matchAgainst:
+                        documentCollections.append( docID )
+                # greater than comparison
+                elif comparisonType == 'gt' :
+                    for thisVal in matchAgainst:
+                        try:
+                            if matchAgainst > int(columnData):
+                                documentCollections.append( docID )
+                        except Exception as e:
+                            continue
+                # less than comparison
+                elif comparisonType == 'lt' :
+                    for thisVal in matchAgainst:
+                        try:
+                            if matchAgainst < int(columnData):
+                                documentCollections.append( docID )
+                        except Exception as e:
+                            continue
+                # between comparison
+                elif comparisonType == 'bt' :
+                    for rangeList in matchAgainst:
+                        try:
+                            if rangeList[0] <= int(columnData) <= rangeList[1]:
+                                documentCollections.append( docID )
+                        except Exception as e:
+                            continue
+                # not equal comparison
+                elif comparisonType == 'neq' :
+                    try:
+                        if columnData not in matchAgainst:
+                            documentCollections.append( docID )
+                    except Exception as e:
+                        continue
+                # greater or equal comparison
+                elif comparisonType == 'geq' :
+                    for thisVal in matchAgainst:
+                        try:
+                            if matchAgainst >= int(columnData):
+                                documentCollections.append( docID )
+                        except Exception as e:
+                            continue
+                # less or equal comparison
+                elif comparisonType == 'leq' :
+                    for thisVal in matchAgainst:
+                        try:
+                            if matchAgainst <= int(columnData):
+                                documentCollections.append( docID )
+                        except Exception as e:
+                            continue
+            else:
+                return None
+    return documentCollections

@@ -46,11 +46,17 @@ def query():
                 },
                 "where": {
                     "_strict": { "users.username": "hasan" },
-                    "eq": { "userid": "2102", "post_status": "1" },
-                    "neq": { "post_status": "0" },
                     "gt": { "votes": "10" },
                     "lt": { "downvotes": "5" },
-                    "bt": { "votes": "5,10" }
+                    "bt": { "votes": ( ["5,10"], [25,50] ) },
+                    "eq": { "userid": ["2102"], "post_status": ["1"] },
+                    "neq": { "post_status": ["0", "-1", "None"] },
+                    "geq": { ... },
+                    "leq": { ... }
+                },
+                "sort": {
+                    "votes": "desc",
+                    "comments_count": "desc"
                 }
             }
     """

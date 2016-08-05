@@ -64,3 +64,13 @@ def safeEscapedString( s ):
 def encodeIndexString( stringValue ):
     s = " ".join( stringValue.split() )
     return safeEscapedString( s )
+
+"""
+    If a string has single or double quotes around it, remove them.
+    Make sure the pair of quotes match.
+    If a matching pair of quotes is not found, return the string unchanged.
+"""
+def dequote( s ):
+    if (s[0] == s[-1]) and s.startswith(("'", '"')):
+        return s[1:-1]
+    return s
