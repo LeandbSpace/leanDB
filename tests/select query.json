@@ -2,16 +2,20 @@
     "action": "FETCH_DATA", 
     "databaseName": "goldposts", 
     "tableName": "posts", 
-    "columns": "*",
+    "columns": [ "title", "slug", "category" ],
     "limit": {
-        "count": "10",
+        "count": "2",
         "skip": "0"
     },
     "where": {
-        "eq"  : [{ "category": "Local News" }, { "category": "Health" }, { "category": "World News" }]
+        "eq" : [ { "category": "Local News" }, { "category": "Health" }, { "category": "World News" } ]
     },
-    "sort": {
-        "votes": "desc",
-        "comments_count": "desc"
-    }
+    "join": {
+        "tableName": "users",
+        "columns": "username, fullname, totalposts",
+        "where": {
+            "eq": [ { "_id": "_this.author" } ]
+        }
+    },
+    "sort": { "_id": "desc" }
 }

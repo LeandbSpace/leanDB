@@ -1,6 +1,6 @@
 <?php
     require_once('func.php');
-    $allposts = dryQuery( '{"action": "FETCH_DATA","databaseName": "goldposts","tableName": "posts","columns": "*","limit": {"count": "10","skip": "0"},"where": {"_strict": { "user": "hasan" },"eq": { "userid": "2102", "post_status": "1" },"gt": { "votes": "10" },"lt": { "downvotes": "5" },"bt": {"votes": "5,10" }}}' );
+    $allposts = dryQuery( '{"action": "FETCH_DATA", "databaseName": "goldposts", "tableName": "posts", "columns": [ "title", "slug", "category" ], "limit": { "count": "10", "skip": "0" }, "where": { "eq" : [{ "category": "Local News" }, { "category": "Health" }, { "category": "World News" }] }, "sort": { "votes": "desc", "comments_count": "desc" } }' );
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,9 +15,8 @@
         <?php
             // print_r( $allposts );
 
-            foreach( $allposts->items as $post ) {
+            foreach( $allposts->data as $post ) {
                 echo '<div style="font-size: 20px;"><a href="/singlepost.php?slug='.$post->slug.'">'.$post->title.'</a></div>';
-                echo '<div style="padding: 10px; background-color:#494949;margin:10px;border-radius:10px;">'.$post->content.'</div>';
             }
 
         ?>

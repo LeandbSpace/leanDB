@@ -56,12 +56,10 @@ def insertData( commandJsonObj, databaseStorage ):
         # descide the document id
         try:
             with open( tableSystemID, 'r+' ) as docID:
-                # currentID = int( docID.read() )
                 currentID = docID.read()
                 docID.seek(0)
                 documentID = str(int(currentID)+1)
                 docID.write( documentID )
-                # docID.truncate()
                 docID.close()
         except Exception as e:
             ret['status'] = {
@@ -141,19 +139,13 @@ def fetchData( commandJsonObj, databaseStorage ):
         else:
             count = 100
             skip = 0
-        # set default value for columns if not given
-        if 'columns' not in commandJsonObj:
-            commandJsonObj['columns'] = '*'
+
         # read id index
         iterationCounts = 0
         _rawDocIdLists = []
         thisResultSet = []
-        """
-            If the query have "where" conditions then using the diggIndex() function this will
-                fetch all documents ID (ID represents the file name of each doc).
-            If there was no where conditions then skip this part and
-                go through the default table pid list.
-        """
+        
+        # Fetch all documents according to the where conditions
         if 'where' in commandJsonObj:
             if commandJsonObj['where'] != '':
                 # Pass the where arguments in the diggIndex() function with necessary informations via param
@@ -161,26 +153,75 @@ def fetchData( commandJsonObj, databaseStorage ):
                     databaseStorage, commandJsonObj['where'], pathEnding )
                 if thisDataPacket['status_type'] == True:
                     _rawDocIdLists += thisDataPacket['documents']
+        else:
+            # No where condition was given, go through the system doc id lists
+            with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid' ) as _id:
+                for item in _id:
+                    _rawDocIdLists.append( item )
         # Remove duplicate doc ID's
-
+        _rawDocIdLists = list( set( _rawDocIdLists ) )
         # Fetch all the doc using their id, decode the json
-        # If the doc file didnt exists then skip that
+        for item in _rawDocIdLists:
+            try:
+                thisDocData = readJson( str(tableAbsolutePath+pathEnding+item+'.ldb').replace('\n', '') )
+                # Validate columns query and descide what columns to send
+                # If no columns was set then it will send all the available columns
+                if 'columns' in commandJsonObj:
+                    if isinstance( commandJsonObj['columns'], list ):
+                        # We have some columns to choose
+                        refinedThisDocData = {}
+                        for colitm in commandJsonObj['columns']:
+                            # Check if this specific columns is exists in the document
+                            if colitm in thisDocData:
+                                refinedThisDocData[colitm] = thisDocData[colitm]
+                            else:
+                                # Given column was not found, so assign null as the value
+                                refinedThisDocData[colitm] = None
+                        # Push system doc _id
+                        if '_id' not in commandJsonObj['columns']:
+                            refinedThisDocData['_id'] = thisDocData['_id']
+                        thisDocData = refinedThisDocData 
+                thisResultSet.append( thisDocData )
+                iterationCounts = iterationCounts + 1
+            except:
+                continue
+        resultSet['data'] = thisResultSet
+        resultSet['iterations'] = iterationCounts
+        resultSet['status_type'] = True
+        resultSet['status_message'] = 'Data fetched successfully'
 
         # Implement sort operations among all the data fetched above
-
+        if 'sort' in commandJsonObj:
+            # sort is in command object
+            if isinstance( commandJsonObj['sort'], dict ):
+                # sort is a dict
+                for indexToOrder in commandJsonObj['sort'].keys():
+                    reverseOrder = None
+                    if str(commandJsonObj['sort'][indexToOrder]).lower() == 'asc':
+                        # ascending order the index
+                        reverseOrder = False
+                    elif str(commandJsonObj['sort'][indexToOrder]).lower() == 'desc' :
+                        # descending order the index
+                        reverseOrder = True
+                    if reverseOrder != None:
+                        # reverse order is valide in asc or desc
+                        try:
+                            # trying to sort the data
+                            resultSet['data'] = sorted( resultSet['data'], key=lambda k:k[indexToOrder], reverse = reverseOrder )
+                        except:
+                            continue
         # Limit number of data item to return
+        resultSetLength = len( resultSet['data'] )
+        if skip > 0:
+            for skipAble in range( 0, skip ):
+                del resultSet['data'][skipAble]
+        # Update current number of data items
+        resultSetLength = len( resultSet['data'] )
+        if resultSetLength > count:
+            for skipToCount in range( count, resultSetLength ):
+                del resultSet['data'][skipToCount]
 
-        # Strip columns/index items according to the query
-        # If there is no columns specified then return all avialable elements
-
-        # with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid' ) as _id:
-        #     for item in _id:
-        #         thisResultSet.append(readJson( str(tableAbsolutePath+pathEnding+item+'.ldb').replace('\n', '') ))
-        #         iterationCounts = iterationCounts + 1
-        # resultSet['items'] = thisResultSet
-        # resultSet['iterations'] = iterationCounts
-        # return resultSet
-        return str(_rawDocIdLists)
+        return resultSet
     else:
         ret['status'] = {
             'status_type': False,
@@ -202,19 +243,13 @@ def multiIndexDigger( database, table, storage, command, pathend ):
     try:
         # find all comparison types eg. 'gt', 'eq', 'lt' etc..
         indexes = command.keys()
-        # print("Indexes")
-        # print(indexes)
         # Start working with all the comparison operations
         for comparisonType in indexes:
             # If the current index is a list, then we would run a loop
             # or if the current index is a dict, then we would simply start working with its indexes
-            # print("Comparison Type")
-            # print(comparisonType)
             thisComparisonCommand = command[comparisonType]
-            # print("This Comparison Command")
-            # print(thisComparisonCommand)
             if isinstance( thisComparisonCommand, list ):
-                # print("Comparison Command is a list")
+                # Comparison Command is a list
                 # This command should include multiple condition of same comparison type
                 for cmdItem in thisComparisonCommand:
                     # Type of cmdItem should be dict
@@ -222,12 +257,9 @@ def multiIndexDigger( database, table, storage, command, pathend ):
                         # Grab all the doc id that meets the conditions
                         documentCollections += diggIndex( database, table, indexName, storage, cmdItem[indexName], comparisonType, pathend )
             elif isinstance( thisComparisonCommand, dict ):
-                # print("Comparison command is a dict")
+                # Comparison command is a dict
                 # This command should include only one condition
                 for indexName in thisComparisonCommand.keys():
-                    # print("Index Name")
-                    # print(indexName)
-                    # print("diggIndex( "+database+", "+table+", "+indexName+", "+storage+", "+thisComparisonCommand[indexName]+", "+comparisonType+", "+pathend+" )")
                     # Grab all the doc id that meets the conditions
                     documentCollections += diggIndex( database, table, indexName, storage, thisComparisonCommand[indexName], comparisonType, pathend )
     except expression as e:
