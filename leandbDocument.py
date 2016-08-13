@@ -42,15 +42,15 @@ def insertData( commandJsonObj, databaseStorage ):
         if( not os.path.isdir( tableAbsolutePath ) ):
             try:
                 os.makedirs( tableAbsolutePath )
-                ret['status'] = [
-                    { 'status_type': True },
-                    { 'status_message': 'Table '+commandJsonObj['tableName']+' created successfully' }
-                ]
+                ret['status'] = {
+                    'status_type': True,
+                    'status_message': 'Table '+commandJsonObj['tableName']+' created successfully'
+                }
             except Exception as e:
-                ret['status'] = [
-                    { 'status_type': False },
-                    { 'status_message': 'Error while creating table: '+str(e.args) }
-                ]
+                ret['status'] = {
+                    'status_type': False,
+                    'status_message': 'Error while creating table: '+str(e.args)
+                }
                 # exit because there was trouble while creating the database and table directories
                 return ret
         # descide the document id
@@ -132,19 +132,10 @@ def fetchData( commandJsonObj, databaseStorage ):
     if( missing == False ):
         # validate if table and database are exists
         resultSet = {}
-        # set default value for limit if any limits are not provided
-        if 'limit' in commandJsonObj:
-            count = int( commandJsonObj['limit']['count'] )
-            skip = int( commandJsonObj['limit']['skip'] )
-        else:
-            count = 100
-            skip = 0
-
         # read id index
         iterationCounts = 0
         _rawDocIdLists = []
-        thisResultSet = []
-        
+        thisResultSet = []        
         # Fetch all documents according to the where conditions
         if 'where' in commandJsonObj:
             if commandJsonObj['where'] != '':
@@ -200,7 +191,7 @@ def fetchData( commandJsonObj, databaseStorage ):
                     if str(commandJsonObj['sort'][indexToOrder]).lower() == 'asc':
                         # ascending order the index
                         reverseOrder = False
-                    elif str(commandJsonObj['sort'][indexToOrder]).lower() == 'desc' :
+                    elif str(commandJsonObj['sort'][indexToOrder]).lower() == 'desc':
                         # descending order the index
                         reverseOrder = True
                     if reverseOrder != None:
@@ -211,16 +202,29 @@ def fetchData( commandJsonObj, databaseStorage ):
                         except:
                             continue
         # Limit number of data item to return
-        resultSetLength = len( resultSet['data'] )
-        if skip > 0:
-            for skipAble in range( 0, skip ):
-                del resultSet['data'][skipAble]
-        # Update current number of data items
-        resultSetLength = len( resultSet['data'] )
-        if resultSetLength > count:
-            for skipToCount in range( count, resultSetLength ):
-                del resultSet['data'][skipToCount]
+        # set default value for limit if any limits are not provided
+        if 'limit' in commandJsonObj:
 
+            if 'skip' in commandJsonObj['limit']:
+                skip = int( commandJsonObj['limit']['skip'] )
+                resultSetLength = len( resultSet['data'] )
+                if skip > 0:
+                    for skipAble in range( 0, skip ):
+                        del resultSet['data'][skipAble]
+
+            if 'count' in commandJsonObj['limit']:
+                count = int( commandJsonObj['limit']['count'] )
+                if count > 0:
+                    resultSetLength = len( resultSet['data'] )
+                    if resultSetLength > count:
+                        itr = 0
+                        tmpData = []
+                        while( itr < resultSetLength ):
+                            if itr < count:
+                                tmpData.append(resultSet['data'][itr])
+                            itr += 1
+                        resultSet['data'] = tmpData
+        resultSet['data_set_count'] = len( resultSet['data'] )
         return resultSet
     else:
         ret['status'] = {
@@ -277,58 +281,48 @@ def multiIndexDigger( database, table, storage, command, pathend ):
 def diggIndex( database, table, index, databaseStorage, matchAgainst, comparisonType, pathEnding ):
     # find the index key name
     indexPath = databaseStorage+database+pathEnding+table+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+index
-    # print("Index Path")
-    # print(indexPath)
     # read each line
     documentCollections = []
     with open( indexPath ) as indexData:
-        # print("Index Data")
-        # print(indexData)
+        # Index Data
         for item in indexData:
-            # print("Item in index data")
-            # print(item)
+            # Item in index data
             # using regular expression to prepare index data columns
             rgxp = re.compile( '(".*?").*?(".*?")', re.IGNORECASE|re.DOTALL )
             rgxp = rgxp.search( item )
             if rgxp:
                 docID = dequote( rgxp.group(1) ).strip()
                 columnData = dequote( rgxp.group(2) ).strip()
-                # print("DOC ID")
-                # print(docID)
-                # print("Column Data")
-                # print(columnData)
                 # equal comparison
                 if comparisonType == 'eq':
-                    # print("In Equal check")
                     if columnData == matchAgainst:
-                        # print("-------> Expected column found")
+                        # Expected column found
+                        # Document Collections
                         documentCollections.append( docID )
-                        # print("Document Collections")
-                        # print(documentCollections)
                 # greater than comparison
                 elif comparisonType == 'gt' :
                     for thisVal in matchAgainst:
                         try:
                             if matchAgainst > int(columnData):
                                 documentCollections.append( docID )
-                        except Exception as e:
-                            continue
+                        except:
+                            pass
                 # less than comparison
                 elif comparisonType == 'lt' :
                     for thisVal in matchAgainst:
                         try:
                             if matchAgainst < int(columnData):
                                 documentCollections.append( docID )
-                        except Exception as e:
-                            continue
+                        except:
+                            pass
                 # between comparison
                 elif comparisonType == 'bt' :
                     for rangeList in matchAgainst:
                         try:
                             if rangeList[0] <= int(columnData) <= rangeList[1]:
                                 documentCollections.append( docID )
-                        except Exception as e:
-                            continue
+                        except:
+                            pass
                 # not equal comparison
                 elif comparisonType == 'neq' :
                     try:

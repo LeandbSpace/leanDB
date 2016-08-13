@@ -1,6 +1,6 @@
 <?php
     require_once('func.php');
-    $allposts = dryQuery( '{"action": "FETCH_DATA", "databaseName": "goldposts", "tableName": "posts", "columns": [ "title", "slug", "category" ], "limit": { "count": "10", "skip": "0" }, "where": { "eq" : [{ "category": "Local News" }, { "category": "Health" }, { "category": "World News" }] }, "sort": { "votes": "desc", "comments_count": "desc" } }' );
+    $allposts = dryQuery( '{"action": "FETCH_DATA", "databaseName": "goldposts", "tableName": "posts", "columns": [ "title", "slug", "category" ], "limit": { "count": "10", "skip": "0" }, "where": { "eq" : [{ "category": "Local News" }, { "category": "Health" }, { "category": "World News" }] }, "sort": { "_id": "desc" } }' );
 ?>
 <!DOCTYPE html>
 <html lang="en">
