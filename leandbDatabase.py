@@ -18,15 +18,15 @@ def createDatabase( databaseName, databaseStorage ):
     if( not os.path.isdir( databaseAbsolutePath ) ):
         try:
             os.makedirs( databaseAbsolutePath )
-            ret['status'] = [
-                { 'status_type': True },
-                { 'status_message': 'Database '+databaseName+' created successfully' }
-            ]
+            ret['status'] = {
+                'status_type': True,
+                'status_message': 'Database '+databaseName+' created successfully'
+            }
         except Exception as e:
-            ret['status'] = [
-                { 'status_type': False },
-                { 'status_message': 'Error: '+str(e.args) }
-            ]
+            ret['status'] = { 
+                'status_type': False,
+                'status_message': 'Error: '+str(e.args) 
+            }
     else:
         ret['status'] = [
             { 'status_type': True },

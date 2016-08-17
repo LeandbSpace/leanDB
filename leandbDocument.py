@@ -58,14 +58,31 @@ def insertData( commandJsonObj, databaseStorage ):
             with open( tableSystemID, 'r+' ) as docID:
                 currentID = docID.read()
                 docID.seek(0)
+                if( currentID == '' ):
+                    currentID = '0'
                 documentID = str(int(currentID)+1)
                 docID.write( documentID )
                 docID.close()
         except Exception as e:
-            ret['status'] = {
-                'status_type': False,
-                'status_message': 'Error while writing document id. ' + str(e.args)
-            }
+            # if the index file is not exists then try to create
+            if not os.path.isfile( tableSystemID ):
+                try:
+                    with open( tableSystemID, 'a+' ) as tsid :
+                        print( value = '0', file = tsid )
+                        ret['status'] = {
+                            'status_type': False,
+                            'status_message': 'The table system id file was missing and has been created, please try again'
+                        }
+                except Exception as e:
+                    ret['status'] = {
+                        'status_type': False,
+                        'status_message': 'Error while re-creating the document id. ' + str(e.args)
+                    }
+            else:
+                ret['status'] = {
+                    'status_type': False,
+                    'status_message': 'Error, table system id is corrupted ' + str(e.args)
+                }
             # exit because there was trouble
             return ret
         # create the data file

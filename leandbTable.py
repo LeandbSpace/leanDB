@@ -32,27 +32,40 @@ def createTable( commandJsonObj, databaseStorage ):
         # If the database was not found then it will 
         # try to create the database directory first and then table dir.
         if( not os.path.isdir( tableAbsolutePath ) ):
+            tableCreated = False
             try:
                 os.makedirs( tableAbsolutePath )
-                ret['status'] = [
-                    { 'status_type': True },
-                    { 'status_message': 'Table '+commandJsonObj['tableName']+' created successfully' }
-                ]
+                ret['status'] = { 
+                    'status_type': True,
+                    'status_message': 'Table '+commandJsonObj['tableName']+' created successfully' 
+                }
+                tableCreated = True
             except Exception as e:
-                ret['status'] = [
-                    { 'status_type': False },
-                    { 'status_message': 'Error while creating table: '+str(e.args) }
-                ]
+                ret['status'] = { 
+                    'status_type': False,
+                    'status_message': 'Error while creating table: '+str(e.args)
+                }
+            # create table system id pointer
+            if tableCreated == True:
+                idFile = databaseStorage+commandJsonObj['databaseName']+pathEndsWith+commandJsonObj['tableName']+pathEndsWith+'_ldb'+pathEndsWith+'id'
+                try:
+                    with open( idFile, 'a+' ) as tsid:
+                        print( '0', file=tsid )
+                except Exception as e:
+                    ret['status'] = { 
+                        'status_type': False,
+                        'status_message': 'Error on creating the system id.' 
+                    }
         else:
-            ret['status'] = [
-                { 'status_type': False },
-                { 'status_message': 'Error while creating table: Table already exists' }
-            ]
+            ret['status'] = { 
+                'status_type': False,
+                'status_message': 'Error while creating table: Table already exists' 
+            }
     else:
-        ret['status'] = [
-            { 'status_type': False },
-            { 'status_message': 'Error while creating table: '+str( missedItems )+' values are missing' }
-        ]
+        ret['status'] = { 
+            'status_type': False,
+            'status_message': 'Error while creating table: '+str( missedItems )+' values are missing' 
+        }
     return ret
         
 
