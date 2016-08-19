@@ -10,6 +10,7 @@
         is helpful for refferencing this document in other queries
 """
 from leandbHelper import *
+from leandbTable import createTable
 import os, re
 import shutil
 
@@ -40,91 +41,133 @@ def insertData( commandJsonObj, databaseStorage ):
         # If the database was not found then it will
         # try to create the database directory first and then table dir.
         if( not os.path.isdir( tableAbsolutePath ) ):
-            try:
-                os.makedirs( tableAbsolutePath )
-                ret['status'] = {
-                    'status_type': True,
-                    'status_message': 'Table '+commandJsonObj['tableName']+' created successfully'
-                }
-            except Exception as e:
-                ret['status'] = {
-                    'status_type': False,
-                    'status_message': 'Error while creating table: '+str(e.args)
-                }
-                # exit because there was trouble while creating the database and table directories
-                return ret
-        # descide the document id
-        try:
-            with open( tableSystemID, 'r+' ) as docID:
-                currentID = docID.read()
-                docID.seek(0)
-                if( currentID == '' ):
-                    currentID = '0'
-                documentID = str(int(currentID)+1)
-                docID.write( documentID )
-                docID.close()
-        except Exception as e:
-            # if the index file is not exists then try to create
-            if not os.path.isfile( tableSystemID ):
-                try:
-                    with open( tableSystemID, 'a+' ) as tsid :
-                        print( value = '0', file = tsid )
-                        ret['status'] = {
-                            'status_type': False,
-                            'status_message': 'The table system id file was missing and has been created, please try again'
-                        }
-                except Exception as e:
+            tmpCmd = {
+                'action' : 'CREATE_TABLE',
+                'databaseName' : commandJsonObj['databaseName'],
+                'tableName' : commandJsonObj['tableName']
+            } 
+            createTable( tmpCmd, databaseStorage )
+            # try:
+            #     os.makedirs( tableAbsolutePath )
+            #     ret['status'] = {
+            #         'status_type': True,
+            #         'status_message': 'Table '+commandJsonObj['tableName']+' created successfully'
+            #     }
+            # except Exception as e:
+            #     ret['status'] = {
+            #         'status_type': False,
+            #         'status_message': 'Error while creating table: '+str(e.args)
+            #     }
+            #     # exit because there was trouble while creating the database and table directories
+            #     return ret
+        # if there was no index was defined assign index to be False
+        if '_index' not in commandJsonObj:
+            if commandJsonObj['_index'] == '':
+                commandJsonObj['_index'] = False
+        # create raw document
+        if isinstance( commandJsonObj['data'], dict ):
+            return createRawDocument( databaseStorage, commandJsonObj['databaseName'], commandJsonObj['tableName'], commandJsonObj['data'], pathEnding, commandJsonObj['_index'] )
+        elif isinstance( commandJsonObj['data'], list ):
+            insertedIdLists = []
+            for dataItem in commandJsonObj['data']:
+                tmpinsert = createRawDocument( databaseStorage, commandJsonObj['databaseName'], commandJsonObj['tableName'], dataItem, pathEnding, commandJsonObj['_index'] )
+                if tmpinsert['status']['status_type'] == True:
+                    insertedIdLists.append( tmpinsert['status']['id'] )
+                else:
                     ret['status'] = {
-                        'status_type': False,
-                        'status_message': 'Error while re-creating the document id. ' + str(e.args)
+                        'status_type' : True,
+                        'status_message' : tmpinsert['status']['status_message'],
+                        'id' : insertedIdLists
                     }
-            else:
-                ret['status'] = {
-                    'status_type': False,
-                    'status_message': 'Error, table system id is corrupted ' + str(e.args)
-                }
-            # exit because there was trouble
-            return ret
-        # create the data file
-        # add the system document id with the json file
-        commandJsonObj['data']['_id'] = documentID
-        try:
-            writeJson( commandJsonObj['data'], tableAbsolutePath+pathEnding+documentID+'.ldb' )
-        except Exception as e:
-            ret['status'] = {
-                'status_type': False,
-                'status_message': 'Error while writing document: '+str(e.args)
-            }
-            # exit because there was trouble
-            return ret
-        # create primary id index
-        with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid', 'a+' ) as pkid:
-            print( documentID, file=pkid )
-        # check for index items
-        if '_index' in commandJsonObj:
-            # split using comma to find individual index elements
-            indexTags = str(commandJsonObj['_index']).split(',')
-            for indexItem in indexTags:
-                # create individual index documents
-                indexItem = stripWhiteSpaces( indexItem )
-                try:
-                    with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+indexItem, 'a+' ) as pkid:
-                        print( '"'+documentID+'" "'+encodeIndexString( commandJsonObj['data'][indexItem] )+'"', file=pkid )
-                except Exception as e:
-                    ret['status'] = {
-                        'status_type': True,
-                        'status_message': 'Error while writing index for "'+indexItem+'": '+str(e.args)
-                    }
-        ret['id'] = documentID
+                    break
+        # return list of the document id
         ret['status'] = {
-            'status_type': True,
-            'status_message': 'New data inserted successfully.'
+            'status_type' : True,
+            'status_message' : "Bulk data has inserted",
+            'id' : insertedIdLists
         }
+        return ret
     else:
         ret['status'] = {
             'status_type': False,
             'status_message': 'Error while inserting data: '+str( missedItems )+' values are missing'
         }
+    return ret
+
+def createRawDocument( storage, database, table, data, pathEnding, index ):
+    ret = {}
+    tableAbsolutePath =  storage+database+pathEnding+table
+    tableConfigFile = tableAbsolutePath+pathEnding+'_ldb'+pathEnding
+    tableSystemID = tableConfigFile+'id'
+
+    # descide the document id
+    try:
+        with open( tableSystemID, 'r+' ) as docID:
+            currentID = docID.read()
+            docID.seek(0)
+            if( currentID == '' ):
+                currentID = '0'
+            documentID = str(int(currentID)+1)
+            docID.write( documentID )
+            docID.close()
+    except Exception as e:
+        # if the index file is not exists then try to create
+        if not os.path.isfile( tableSystemID ):
+            try:
+                with open( tableSystemID, 'a+' ) as tsid :
+                    print( value = '0', file = tsid )
+                    ret['status'] = {
+                        'status_type': False,
+                        'status_message': 'The table system id file was missing and has been created, please try again'
+                    }
+            except Exception as e:
+                ret['status'] = {
+                    'status_type': False,
+                    'status_message': 'Error while re-creating the document id. ' + str(e.args)
+                }
+        else:
+            ret['status'] = {
+                'status_type': False,
+                'status_message': 'Error, table system id is corrupted ' + str(e.args)
+            }
+        # exit because there was trouble
+        return ret
+    # create the data file
+    # add the system document id with the json file
+    data['_id'] = documentID
+    try:
+        writeJson( data, tableAbsolutePath+pathEnding+documentID+'.ldb' )
+    except Exception as e:
+        ret['status'] = {
+            'status_type': False,
+            'status_message': 'Error while writing document: '+str(e.args)
+        }
+        # exit because there was trouble
+        return ret
+    # create primary id index
+    with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid', 'a+' ) as pkid:
+        print( documentID, file=pkid )
+    # check for index items
+    # if '_index' in commandJsonObj:
+    if index != False:
+        # split using comma to find individual index elements
+        indexTags = str(index.split(','))
+        for indexItem in indexTags:
+            # create individual index documents
+            indexItem = stripWhiteSpaces( indexItem )
+            try:
+                with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+indexItem, 'a+' ) as pkid:
+                    print( '"'+documentID+'" "'+encodeIndexString( commandJsonObj['data'][indexItem] )+'"', file=pkid )
+            except Exception as e:
+                ret['status'] = {
+                    'status_type': True,
+                    'status_message': 'Error while writing index for "'+indexItem+'": '+str(e.args)
+                }
+    ret['status'] = {
+        'id' : documentID,
+        'status_type': True,
+        'status_message': 'New data inserted successfully.'
+    }
     return ret
 
 def fetchData( commandJsonObj, databaseStorage ):
@@ -283,7 +326,7 @@ def multiIndexDigger( database, table, storage, command, pathend ):
                 for indexName in thisComparisonCommand.keys():
                     # Grab all the doc id that meets the conditions
                     documentCollections += diggIndex( database, table, indexName, storage, thisComparisonCommand[indexName], comparisonType, pathend )
-    except expression as e:
+    except Exception as e:
         return {
             'status_type': False,
             'status_message': 'Error in "where" conditions: '+str(e.args)

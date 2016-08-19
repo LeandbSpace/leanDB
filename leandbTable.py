@@ -75,15 +75,15 @@ def deleteTable( commandJsonObj, databaseStorage ):
     tableAbsolutePath =  databaseStorage+commandJsonObj['databaseName']+pathEndsWith+commandJsonObj['tableName']
     try:
         shutil.rmtree( tableAbsolutePath )
-        ret['status'] = [
-            { 'status_type': True },
-            { 'status_message': 'Database '+commandJsonObj['tableName']+' deleted successfully' }
-        ]
+        ret['status'] = {
+            'status_type': True,
+            'status_message': 'Database '+commandJsonObj['tableName']+' deleted successfully'
+        } 
     except Exception as e:
-        ret['status'] = [
-            { 'status_type': False },
-            { 'status_message': 'Error: '+str(e.args) }
-        ]
+        ret['status'] = {
+            'status_type': False,
+            'status_message': 'Error: '+str(e.args)
+        }
     return ret
 
 def renameTable( commandJsonObj, databaseStorage ):
@@ -91,13 +91,13 @@ def renameTable( commandJsonObj, databaseStorage ):
     try:
         os.rename( databaseStorage+commandJsonObj['databaseName']+pathEndsWith+commandJsonObj['tableName'], 
                   databaseStorage+commandJsonObj['databaseName']+pathEndsWith+commandJsonObj['newTableName'] )
-        ret['status'] = [
-            { 'status_type': True },
-            { 'status_message': 'Database '+commandJsonObj['tableName']+' renamed to '+commandJsonObj['newTableName']+' successfully' }
-        ]
+        ret['status'] = {
+            'status_type': True,
+            'status_message': 'Database '+commandJsonObj['tableName']+' renamed to '+commandJsonObj['newTableName']+' successfully'
+        }
     except Exception as e:
-        ret['status'] = [
-            { 'status_type': False },
-            { 'status_message': 'Error: '+str(e.args) }
-        ]
+        ret['status'] = {
+            'status_type': False,
+            'status_message': 'Error: '+str(e.args)
+        }
     return ret
