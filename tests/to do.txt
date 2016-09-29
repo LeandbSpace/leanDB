@@ -1,0 +1,14 @@
+Error: index files are not properly created
+-> fix index files
+-> do something if the index files was not found
+{
+    "action" : "FETCH_DATA",
+    "databaseName" : "wowdata", 
+    "tableName" : "wow", 
+    "limit" : {
+        "count" : 10
+    },
+    "where" : {
+        "eq" : [ { "user_id" : 50 } ]
+    }
+}

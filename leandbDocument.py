@@ -171,6 +171,7 @@ def createRawDocument( storage, database, table, data, pathEnding, index ):
     return ret
 
 def fetchData( commandJsonObj, databaseStorage ):
+    print('from fetch data')
     ret = {}
     missing = False
     missedItems = []
@@ -196,12 +197,20 @@ def fetchData( commandJsonObj, databaseStorage ):
         iterationCounts = 0
         _rawDocIdLists = []
         thisResultSet = []        
+        missing_indexes = []
         # Fetch all documents according to the where conditions
         if 'where' in commandJsonObj:
             if commandJsonObj['where'] != '':
                 # Pass the where arguments in the diggIndex() function with necessary informations via param
                 thisDataPacket = multiIndexDigger( commandJsonObj['databaseName'], commandJsonObj['tableName'], 
                     databaseStorage, commandJsonObj['where'], pathEnding )
+                print('Printing thisDataPacket')
+                print(thisDataPacket)
+                # Check if there is any indexes are missing
+                if thisDataPacket['missing_indexes'] != []:
+                    for missingIndex in thisDataPacket['missing_indexes']:
+                        if missingIndex not in missing_indexes:
+                            missing_indexes.append(missingIndex)
                 if thisDataPacket['status_type'] == True:
                     _rawDocIdLists += thisDataPacket['documents']
         else:
@@ -285,6 +294,10 @@ def fetchData( commandJsonObj, databaseStorage ):
                             itr += 1
                         resultSet['data'] = tmpData
         resultSet['data_set_count'] = len( resultSet['data'] )
+
+        # If we have some indexes missing, then glue the information here
+        if missing_indexes != []:
+            resultSet['missing_indexes'] = missing_indexes
         return resultSet
     else:
         ret['status'] = {
@@ -303,110 +316,133 @@ def multiIndexDigger( database, table, storage, command, pathend ):
                   OR
                 - If it is a list, then we run a for loop, then for each dict we will follow the above steps.
     """
+    ret = {}
+    ret['missing_indexes'] = []
     documentCollections = []
     try:
         # find all comparison types eg. 'gt', 'eq', 'lt' etc..
         indexes = command.keys()
+        print(indexes)
         # Start working with all the comparison operations
         for comparisonType in indexes:
+            print(comparisonType)
             # If the current index is a list, then we would run a loop
             # or if the current index is a dict, then we would simply start working with its indexes
             thisComparisonCommand = command[comparisonType]
+            print(thisComparisonCommand)
             if isinstance( thisComparisonCommand, list ):
-                # Comparison Command is a list
+                print('Comparison Command is a list ')
+                # Comparison Command is a list 
                 # This command should include multiple condition of same comparison type
                 for cmdItem in thisComparisonCommand:
+                    print(cmdItem)
                     # Type of cmdItem should be dict
                     for indexName in cmdItem.keys():
+                        print('line 327: ' + indexName) 
                         # Grab all the doc id that meets the conditions
-                        documentCollections += diggIndex( database, table, indexName, storage, cmdItem[indexName], comparisonType, pathend )
+                        thisIndexDiggedData = diggIndex( database, table, indexName, storage, cmdItem[indexName], comparisonType, pathend )
+                        if thisIndexDiggedData == False:
+                            # Index file was not found -_- 
+                            ret['missing_indexes'].append(indexName)
+                        else:
+                            documentCollections += thisIndexDiggedData 
             elif isinstance( thisComparisonCommand, dict ):
+                print('Comparison command is a dict')
                 # Comparison command is a dict
                 # This command should include only one condition
                 for indexName in thisComparisonCommand.keys():
                     # Grab all the doc id that meets the conditions
                     documentCollections += diggIndex( database, table, indexName, storage, thisComparisonCommand[indexName], comparisonType, pathend )
     except Exception as e:
-        return {
-            'status_type': False,
-            'status_message': 'Error in "where" conditions: '+str(e.args)
-        }
+        ret['status_type'] = False
+        ret['status_message'] = 'Error in "where" conditions: '+str(e.args)
+        return ret
     # Document id should be collected
-    return {
-        'status_type': True,
-        'status_message': 'All document ID fetched',
-        'documents': documentCollections
-    }
+    ret['status_type'] = True
+    ret['status_message'] = 'All document ID fetched'
+    ret['documents'] = documentCollections
+    return ret
 
+# This function will only work with a single index file.
+# It will read a index file if exists and then parse the data as required.
 def diggIndex( database, table, index, databaseStorage, matchAgainst, comparisonType, pathEnding ):
     # find the index key name
     indexPath = databaseStorage+database+pathEnding+table+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+index
-    # read each line
-    documentCollections = []
-    with open( indexPath ) as indexData:
-        # Index Data
-        for item in indexData:
-            # Item in index data
-            # using regular expression to prepare index data columns
-            rgxp = re.compile( '(".*?").*?(".*?")', re.IGNORECASE|re.DOTALL )
-            rgxp = rgxp.search( item )
-            if rgxp:
-                docID = dequote( rgxp.group(1) ).strip()
-                columnData = dequote( rgxp.group(2) ).strip()
-                # equal comparison
-                if comparisonType == 'eq':
-                    if columnData == matchAgainst:
-                        # Expected column found
-                        # Document Collections
-                        documentCollections.append( docID )
-                # greater than comparison
-                elif comparisonType == 'gt' :
-                    for thisVal in matchAgainst:
-                        try:
-                            if matchAgainst > int(columnData):
-                                documentCollections.append( docID )
-                        except:
-                            pass
-                # less than comparison
-                elif comparisonType == 'lt' :
-                    for thisVal in matchAgainst:
-                        try:
-                            if matchAgainst < int(columnData):
-                                documentCollections.append( docID )
-                        except:
-                            pass
-                # between comparison
-                elif comparisonType == 'bt' :
-                    for rangeList in matchAgainst:
-                        try:
-                            if rangeList[0] <= int(columnData) <= rangeList[1]:
-                                documentCollections.append( docID )
-                        except:
-                            pass
-                # not equal comparison
-                elif comparisonType == 'neq' :
-                    try:
-                        if columnData not in matchAgainst:
+    # Check if the index file is exists
+    if os.path.isfile(indexPath):
+        # print(indexPath)
+        # read each line
+        documentCollections = []
+        with open( indexPath ) as indexData:
+            # Index Data
+            for item in indexData:
+                # Item in index data
+                # using regular expression to prepare index data columns
+                rgxp = re.compile( '(".*?").*?(".*?")', re.IGNORECASE|re.DOTALL )
+                rgxp = rgxp.search( item )
+                if rgxp:
+                    docID = dequote( rgxp.group(1) ).strip()
+                    columnData = dequote( rgxp.group(2) ).strip()
+                    print(docID)
+                    print(columnData)
+                    # equal comparison
+                    if comparisonType == 'eq':
+                        print('from eq')
+                        if columnData == matchAgainst:
+                            # Expected column found
+                            # Document Collections
                             documentCollections.append( docID )
-                    except Exception as e:
-                        continue
-                # greater or equal comparison
-                elif comparisonType == 'geq' :
-                    for thisVal in matchAgainst:
+                    # greater than comparison
+                    elif comparisonType == 'gt' :
+                        print( 'greater than command was found' )
+                        for thisVal in matchAgainst:
+                            try:
+                                if matchAgainst > int(columnData):
+                                    documentCollections.append( docID )
+                            except:
+                                pass
+                    # less than comparison
+                    elif comparisonType == 'lt' :
+                        for thisVal in matchAgainst:
+                            try:
+                                if matchAgainst < int(columnData):
+                                    documentCollections.append( docID )
+                            except:
+                                pass
+                    # between comparison
+                    elif comparisonType == 'bt' :
+                        for rangeList in matchAgainst:
+                            try:
+                                if rangeList[0] <= int(columnData) <= rangeList[1]:
+                                    documentCollections.append( docID )
+                            except:
+                                pass
+                    # not equal comparison
+                    elif comparisonType == 'neq' :
                         try:
-                            if matchAgainst >= int(columnData):
+                            if columnData not in matchAgainst:
                                 documentCollections.append( docID )
                         except Exception as e:
                             continue
-                # less or equal comparison
-                elif comparisonType == 'leq' :
-                    for thisVal in matchAgainst:
-                        try:
-                            if matchAgainst <= int(columnData):
-                                documentCollections.append( docID )
-                        except Exception as e:
-                            continue
-            else:
-                return None
-    
-    return documentCollections
+                    # greater or equal comparison
+                    elif comparisonType == 'geq' :
+                        for thisVal in matchAgainst:
+                            try:
+                                if matchAgainst >= int(columnData):
+                                    documentCollections.append( docID )
+                            except Exception as e:
+                                continue
+                    # less or equal comparison
+                    elif comparisonType == 'leq' :
+                        for thisVal in matchAgainst:
+                            try:
+                                if matchAgainst <= int(columnData):
+                                    documentCollections.append( docID )
+                            except Exception as e:
+                                continue
+                else:
+                    return None
+        
+        return documentCollections
+    else:
+        return False
