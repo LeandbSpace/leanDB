@@ -47,27 +47,15 @@ def insertData( commandJsonObj, databaseStorage ):
                 'tableName' : commandJsonObj['tableName']
             } 
             createTable( tmpCmd, databaseStorage )
-            # try:
-            #     os.makedirs( tableAbsolutePath )
-            #     ret['status'] = {
-            #         'status_type': True,
-            #         'status_message': 'Table '+commandJsonObj['tableName']+' created successfully'
-            #     }
-            # except Exception as e:
-            #     ret['status'] = {
-            #         'status_type': False,
-            #         'status_message': 'Error while creating table: '+str(e.args)
-            #     }
-            #     # exit because there was trouble while creating the database and table directories
-            #     return ret
-        # if there was no index was defined assign index to be False
-        if '_index' not in commandJsonObj:
-            if commandJsonObj['_index'] == '':
-                commandJsonObj['_index'] = False
         # create raw document
         if isinstance( commandJsonObj['data'], dict ):
+            # if there was no index was defined assign index to be False
+            if '_index' in commandJsonObj:
+                if commandJsonObj['_index'] == '':
+                    commandJsonObj['_index'] = False
             return createRawDocument( databaseStorage, commandJsonObj['databaseName'], commandJsonObj['tableName'], commandJsonObj['data'], pathEnding, commandJsonObj['_index'] )
         elif isinstance( commandJsonObj['data'], list ):
+            # data object is a list
             insertedIdLists = []
             for dataItem in commandJsonObj['data']:
                 tmpinsert = createRawDocument( databaseStorage, commandJsonObj['databaseName'], commandJsonObj['tableName'], dataItem, pathEnding, commandJsonObj['_index'] )
@@ -151,13 +139,13 @@ def createRawDocument( storage, database, table, data, pathEnding, index ):
     # if '_index' in commandJsonObj:
     if index != False:
         # split using comma to find individual index elements
-        indexTags = str(index.split(','))
+        indexTags = str(index).split(',')
         for indexItem in indexTags:
             # create individual index documents
             indexItem = stripWhiteSpaces( indexItem )
             try:
                 with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+indexItem, 'a+' ) as pkid:
-                    print( '"'+documentID+'" "'+encodeIndexString( commandJsonObj['data'][indexItem] )+'"', file=pkid )
+                    print( '"'+documentID+'" "'+encodeIndexString( data[indexItem] )+'"', file=pkid )
             except Exception as e:
                 ret['status'] = {
                     'status_type': True,
@@ -171,7 +159,6 @@ def createRawDocument( storage, database, table, data, pathEnding, index ):
     return ret
 
 def fetchData( commandJsonObj, databaseStorage ):
-    print('from fetch data')
     ret = {}
     missing = False
     missedItems = []
@@ -204,8 +191,6 @@ def fetchData( commandJsonObj, databaseStorage ):
                 # Pass the where arguments in the diggIndex() function with necessary informations via param
                 thisDataPacket = multiIndexDigger( commandJsonObj['databaseName'], commandJsonObj['tableName'], 
                     databaseStorage, commandJsonObj['where'], pathEnding )
-                print('Printing thisDataPacket')
-                print(thisDataPacket)
                 # Check if there is any indexes are missing
                 if thisDataPacket['missing_indexes'] != []:
                     for missingIndex in thisDataPacket['missing_indexes']:
@@ -322,23 +307,17 @@ def multiIndexDigger( database, table, storage, command, pathend ):
     try:
         # find all comparison types eg. 'gt', 'eq', 'lt' etc..
         indexes = command.keys()
-        print(indexes)
         # Start working with all the comparison operations
         for comparisonType in indexes:
-            print(comparisonType)
             # If the current index is a list, then we would run a loop
             # or if the current index is a dict, then we would simply start working with its indexes
             thisComparisonCommand = command[comparisonType]
-            print(thisComparisonCommand)
             if isinstance( thisComparisonCommand, list ):
-                print('Comparison Command is a list ')
                 # Comparison Command is a list 
                 # This command should include multiple condition of same comparison type
                 for cmdItem in thisComparisonCommand:
-                    print(cmdItem)
                     # Type of cmdItem should be dict
                     for indexName in cmdItem.keys():
-                        print('line 327: ' + indexName) 
                         # Grab all the doc id that meets the conditions
                         thisIndexDiggedData = diggIndex( database, table, indexName, storage, cmdItem[indexName], comparisonType, pathend )
                         if thisIndexDiggedData == False:
@@ -347,7 +326,6 @@ def multiIndexDigger( database, table, storage, command, pathend ):
                         else:
                             documentCollections += thisIndexDiggedData 
             elif isinstance( thisComparisonCommand, dict ):
-                print('Comparison command is a dict')
                 # Comparison command is a dict
                 # This command should include only one condition
                 for indexName in thisComparisonCommand.keys():
@@ -370,7 +348,6 @@ def diggIndex( database, table, index, databaseStorage, matchAgainst, comparison
     indexPath = databaseStorage+database+pathEnding+table+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+index
     # Check if the index file is exists
     if os.path.isfile(indexPath):
-        # print(indexPath)
         # read each line
         documentCollections = []
         with open( indexPath ) as indexData:
@@ -383,8 +360,6 @@ def diggIndex( database, table, index, databaseStorage, matchAgainst, comparison
                 if rgxp:
                     docID = dequote( rgxp.group(1) ).strip()
                     columnData = dequote( rgxp.group(2) ).strip()
-                    print(docID)
-                    print(columnData)
                     # equal comparison
                     if comparisonType == 'eq':
                         print('from eq')

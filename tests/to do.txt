@@ -1,6 +1,6 @@
 Error: index files are not properly created
 -> fix index files
--> do something if the index files was not found
+-> do something if the index files was not found [ done ]
 {
     "action" : "FETCH_DATA",
     "databaseName" : "wowdata", 
