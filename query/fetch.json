@@ -1,0 +1,11 @@
+{
+    "action": "FETCH_DATA", 
+    "databaseName": "ant", 
+    "tableName": "posts",
+    "where" : {
+        "eq" : [
+            { "author" : 26 }, 
+            { "author" : 25 }
+        ]
+    }
+}

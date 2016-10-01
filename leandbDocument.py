@@ -369,55 +369,48 @@ def diggIndex( database, table, index, databaseStorage, matchAgainst, comparison
                             documentCollections.append( docID )
                     # greater than comparison
                     elif comparisonType == 'gt' :
-                        print( 'greater than command was found' )
-                        for thisVal in matchAgainst:
-                            try:
-                                if matchAgainst > int(columnData):
-                                    documentCollections.append( docID )
-                            except:
-                                pass
+                        try:
+                            if int(columnData) > int(matchAgainst):
+                                documentCollections.append( docID )
+                        except:
+                            pass
                     # less than comparison
                     elif comparisonType == 'lt' :
-                        for thisVal in matchAgainst:
-                            try:
-                                if matchAgainst < int(columnData):
-                                    documentCollections.append( docID )
-                            except:
-                                pass
+                        try:
+                            if int(columnData) < int(matchAgainst):
+                                documentCollections.append( docID )
+                        except:
+                            pass
                     # between comparison
                     elif comparisonType == 'bt' :
-                        for rangeList in matchAgainst:
                             try:
-                                if rangeList[0] <= int(columnData) <= rangeList[1]:
+                                if int(matchAgainst[0]) <= int(columnData) <= int(matchAgainst[1]):
                                     documentCollections.append( docID )
                             except:
                                 pass
                     # not equal comparison
                     elif comparisonType == 'neq' :
                         try:
-                            if columnData not in matchAgainst:
+                            if columnData != matchAgainst:
                                 documentCollections.append( docID )
                         except Exception as e:
                             continue
                     # greater or equal comparison
                     elif comparisonType == 'geq' :
-                        for thisVal in matchAgainst:
-                            try:
-                                if matchAgainst >= int(columnData):
-                                    documentCollections.append( docID )
-                            except Exception as e:
-                                continue
+                        try:
+                            if int(columnData) >= int(matchAgainst):
+                                documentCollections.append( docID )
+                        except:
+                            pass
                     # less or equal comparison
                     elif comparisonType == 'leq' :
-                        for thisVal in matchAgainst:
-                            try:
-                                if matchAgainst <= int(columnData):
-                                    documentCollections.append( docID )
-                            except Exception as e:
-                                continue
+                        try:
+                            if int(columnData) <= int(matchAgainst):
+                                documentCollections.append( docID )
+                        except:
+                            pass
                 else:
                     return None
-        
         return documentCollections
     else:
         return False

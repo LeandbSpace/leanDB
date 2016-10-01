@@ -1,0 +1,33 @@
+{
+    "action": "INSERT_DATA", 
+    "databaseName": "ant", 
+    "tableName": "posts", 
+    "data": [
+        {
+            "title" : "hello world",
+            "author" : 20,
+            "votes" : 123
+        },
+        {
+            "title" : "watching Ban VS Afg",
+            "author" : 20,
+            "votes" : 17
+        },
+        {
+            "title" : "python and php are my favorite",
+            "author" : 25,
+            "votes" : 341
+        },
+        {
+            "title" : "bad customer support @lg-g4",
+            "author" : 25,
+            "votes" : 3526
+        },
+        {
+            "title" : "leanDB is awesome",
+            "author" : 26,
+            "votes" : 5643
+        }
+    ],
+    "_index": "title, author, votes"
+}

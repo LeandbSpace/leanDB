@@ -3,7 +3,7 @@
     "release" : "unstable",
     "serv_ip" : "127.10.5.10",
     "serv_port" : 5925,
-    "storage_path" : "./data-store",
+    "storage_path" : "F:\\leandata",
     "leandb_absolute_location" : "",
     "debug" : true
 }
