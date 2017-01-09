@@ -2,64 +2,23 @@ from leandbHelper import *
 from leandbDatabase import *
 from leandbTable import *
 from leandbDocument import *
+from leandbUpdate import *
+from leandbDelete import *
 from bottle import route, run, post, request
 import json
 
 # fetch and assign leandb configuration data
 configData = starterConf()
 
+# default controller for the ip
+@route( '/', method='GET')
+def index():
+    return '{ "status" : 1 }'
+
 # method to handle a database
 # db = database
 @route( '/query', method = 'POST' )
 def query():
-    """
-        To create a new database: { "action": "CREATE_DATABASE", "databaseName": "prijm_discussions" }
-        Delete a database: { "action": "DELETE_DATABASE", "databaseName": "prijm_discussions" }
-        Rename a database: { "action": "RENAME_DATABASE", "databaseName": "prijm_discussions", "newDatabaseName": "prijm_main" }
-        Create a new table: { "action": "CREATE_TABLE", "databaseName": "prijm_news", "tableName": "news" }
-        Rename a table: { "action": "RENAME_TABLE", "databaseName": "prijm_news", "tableName": "logs", "newTableName": "login_logs"}
-        Delete a table: { "action": "DELETE_TABLE", "databaseName": "prijm_news", "tableName": "login_logs"}
-        Insert data: 
-            { "action": "INSERT_DATA", "databaseName": "prijm_news", "tableName": "news", "data": {
-                    "title": "Are you lost yeay",
-                    "author": "Hasan",
-                    "moderators": [
-                        { "name": "Shoy" },
-                        { "name": "Mays" },
-                        { "name": "Homy" }
-                    ],
-                    "news": "The day was so cute, i was waiting for a ..",
-                    "post_status": "1",
-                    "comments": "enabled"
-                },
-                "_index": "title, author, post_status, comments"
-            }
-        Fetch Data:
-            { 
-                "action": "FETCH_DATA", 
-                "databaseName": "goldposts", 
-                "tableName": "posts", 
-                "columns": "*",
-                "limit": {
-                    "count": "10",
-                    "skip": "0"
-                },
-                "where": {
-                    "_strict": { "users.username": "hasan" },
-                    "gt"  : [ { "votes": "10" }, { "comments": "5" } ],
-                    "lt"  : { "downvotes": "5" },
-                    "bt"  : { "votes": ( ["5,10"], [25,50] ) },
-                    "eq"  : { "userid": ["2102"], "post_status": ["1"] },
-                    "neq" : { "post_status": ["0", "-1", "None"] },
-                    "geq" : { ... },
-                    "leq" : { ... }
-                },
-                "sort": {
-                    "votes": "desc",
-                    "comments_count": "desc"
-                }
-            }
-    """
     try:
         command = json.loads(request.forms.get('cmd'))
     except Exception as e:
@@ -81,6 +40,10 @@ def query():
         return insertData( command, configData['storage_path'] )
     elif( command['action'] == 'FETCH_DATA' ):
         return fetchData( command, configData['storage_path'] )
+    elif( command['action'] == 'UPDATE_DATA' ):
+        return updateData( command, configData['storage_path'] )
+    elif( command['action'] == 'DELETE_DATA' ):
+        return deleteData( command, configData['storage_path'] )
 
 # run the server, get server informations from leandb conf file
 run(

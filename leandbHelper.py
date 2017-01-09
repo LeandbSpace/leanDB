@@ -1,4 +1,4 @@
-import json
+import json, os
 from sys import platform as _platform
 
 def pathEndWith():
@@ -29,7 +29,13 @@ def writeJson( jsonData, filePath ):
     return a json dumps of all informations it found.
 """
 def starterConf():
-    configData = readJson( 'conf/leandb_starter_conf.json' )
+    # get the configaration file location dynamicly
+    confPath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'leandb_starter_conf.json')
+    # dirty fix for windows
+    confPath = confPath.replace('leandb.exe\\', '')
+    # dirty fix for ubuntu
+    confPath = confPath.replace( 'lib/python35.zip/', '' )
+    configData = readJson( confPath )
     # validate path settings
     pathEndWithString = pathEndWith()
     if( not configData['storage_path'].endswith( pathEndWithString ) ):

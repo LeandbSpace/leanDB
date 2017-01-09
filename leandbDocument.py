@@ -133,8 +133,8 @@ def createRawDocument( storage, database, table, data, pathEnding, index ):
         # exit because there was trouble
         return ret
     # create primary id index
-    with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid', 'a+' ) as pkid:
-        print( documentID, file=pkid )
+    with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'_id', 'a+' ) as pkid:
+        print( '"'+documentID+'" "'+documentID+'"', file=pkid )
     # check for index items
     # if '_index' in commandJsonObj:
     if index != False:
@@ -183,7 +183,7 @@ def fetchData( commandJsonObj, databaseStorage ):
         # read id index
         iterationCounts = 0
         _rawDocIdLists = []
-        thisResultSet = []        
+        thisResultSet = []
         missing_indexes = []
         # Fetch all documents according to the where conditions
         if 'where' in commandJsonObj:
@@ -200,9 +200,13 @@ def fetchData( commandJsonObj, databaseStorage ):
                     _rawDocIdLists += thisDataPacket['documents']
         else:
             # No where condition was given, go through the system doc id lists
-            with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'pid' ) as _id:
+            with open( tableAbsolutePath+pathEnding+'_ldb'+pathEnding+'_index'+pathEnding+'_id' ) as _id:
                 for item in _id:
-                    _rawDocIdLists.append( item )
+                    rgxp = re.compile( '(".*?").*?(".*?")', re.IGNORECASE|re.DOTALL )
+                    rgxp = rgxp.search( item )
+                    if rgxp:
+                        docID = dequote( rgxp.group(1) ).strip()
+                        _rawDocIdLists.append( docID )
         # Remove duplicate doc ID's
         _rawDocIdLists = list( set( _rawDocIdLists ) )
         # Fetch all the doc using their id, decode the json
@@ -362,7 +366,6 @@ def diggIndex( database, table, index, databaseStorage, matchAgainst, comparison
                     columnData = dequote( rgxp.group(2) ).strip()
                     # equal comparison
                     if comparisonType == 'eq':
-                        print('from eq')
                         if columnData == matchAgainst:
                             # Expected column found
                             # Document Collections
